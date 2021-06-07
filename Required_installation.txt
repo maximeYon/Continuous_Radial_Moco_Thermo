@@ -1,0 +1,21 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%                                                                %%%%%%%%%%
+%%%%%%%%%                                                                %%%%%%%%%%
+%%%%%%%%%           Radial golden angle Thermometry processing           %%%%%%%%%%
+%%%%%%%%%                                                                %%%%%%%%%%
+%%%%%%%%%                                                                %%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Maxime Yon 03/06/2021
+
+The Radial Golden angle undersampled Thermometry proceesing requires the installation
+of :
+
+--- ISMRMRD : https://github.com/ismrmrd/ismrmrd
+--- ISMRMRD sunrise Matlab :https://github.com/hansenms/ismrm_sunrise_matlab
+--- GPU NUFFT : https://github.com/andyschwarzl/gpuNUFFT
+--- Jeff Fessler's Image Reconstruction Toolbox: http://web.eecs.umich.edu/~fessler/code/index.html
+--- William Grissom Accelerated MRI thermometry by direct estimation of temperature from undersampled k-space data code
+    https://bitbucket.org/wgrissom/k-space-thermometry/downloads/
+
+
