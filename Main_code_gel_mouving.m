@@ -25,8 +25,8 @@ Resolution = 0.8594; % Spatial resolution of the images and temperature maps in 
 Number_of_spokes_per_image = 40; % if empty all the spokes will be used to create one image
 micro_coil_selection = 4; % 1 tip; 2 proximal; 3 distal; 4 averaging
 smoo = 2; % Smoothing of the motion curves
-N_resp_phase = 8; % Number of respiratory phase for Thermometry library
-N_card_phase = 3; % Number of cardiac phase for Thermometry library
+N_resp_phase = 10; % Number of respiratory phase for Thermometry library 12
+N_card_phase = 1; % Number of cardiac phase for Thermometry library
 Calibration = 3000; % Number of projections for calibration
 display = 1 ; % 1 to display intermediate figures
 
@@ -41,14 +41,11 @@ clearvars lambda beta;
 
 
 %% Load the data and noise
-% sagittal
-% filename='/home/maximeyon/mount/maxime.yon/Data/2020-02-14_sheep_Maxime/meas_MID00176_FID16433_ablation_3_real_with_GA.h5';
-% axial
-filename='/home/maximeyon/mount/maxime.yon/Data/2021-04-08_Data_Radial_sheep/first_day/abl1/CV_Tracking_Maxime_GA_tra_abl1.h5';
+% data
+filename='/home/maximeyon/mount/maxime.yon/Data/2020-07-23_ablationGel_Motion_new/CV_Tracking_Maxime_GA_abl7_50W_60s.h5'; % abl 4, 1-2 are good
 
 %Noise : if no noise comment the filename line
-% filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2020-02-14_sheep_Maxime/meas_MID00176_NOISE16433_ablation_3_real_with_GA.h5';
-filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2021-04-08_Data_Radial_sheep/first_day/abl1/NOISE_tra_abl1.h5';
+filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2020-07-23_ablationGel_Motion_new/NOISE_42563_426664_426669_373_20200723-161740.h5';
 
 
 %% Open the .h5 data
@@ -109,9 +106,19 @@ parameter.Fs = 1/(parameter.TR.*10.^-3*2);
 [parameter,Kspace_proj] = my_2D_rigid_MOCO(parameter,Centroid,Kspace_proj,trajtotale);
 
 %% Create ECG and respiratory phase list
-[parameter,list_proj_ECG] = my_ECG_sorting(parameter,Z_intensity); % Here the spot intensity is chosen for ECG
-[parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Z_intensity);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
-% [parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Centroid);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
+[parameter,list_proj_ECG] = my_ECG_sorting(parameter,Centroid); % Here the spot intensity is chosen for ECG
+% [parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Z_intensity);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
+[parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Centroid);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
+
+%% Check phases resp
+ind_centroid = 1:size(Centroid,1);
+figure(101)
+hold on
+for ind_Resp = 1:size(list_proj_Resp,2)
+    ind_without_zeros = list_proj_Resp(:,ind_Resp);
+    ind_without_zeros = ind_without_zeros(ind_without_zeros~=0);
+    plot(ind_centroid(ind_without_zeros),Centroid(ind_without_zeros),'*')    
+end
 
 %% Resolution reduction to increase SNR and time resolution
 parameter.Npixel = (round((parameter.FOVx/parameter.Resolution)/2)).*2;
@@ -132,8 +139,9 @@ clearvars Ind_zeros;
 %% Save variables
 Thermometry = single(Thermometry);
 img_comb = single(img_comb); img_comb_full = single(img_comb_full);
-save(['/home/maximeyon/mount/maxime.yon/Grissom_for_Olivier/in_vivo/Ablation_in_vivo_axial' num2str(parameter.TE) '_ms_' num2str(parameter.Nspokes) '_spokes.mat'],'img_comb','img_comb_full','Thermometry','parameter','-v7.3');
+save(['/home/maximeyon/mount/maxime.yon/Grissom_for_Olivier/gel_motion/Ablation_Gel_motion' num2str(parameter.TE) '_ms_' num2str(parameter.Nspokes) '_spokes_noMOCO.mat'],'img_comb','img_comb_full','Thermometry','parameter','-v7.3');
 
+% save(['/home/maximeyon/mount/maxime.yon/Grissom_for_Olivier/gel_motion/Raw_data_Gel_motion_' num2str(parameter.TE) '_ms_.mat'],'Centroid','DCF','Kspace_proj','Kspace_proj_MOCO','list_proj_Resp','parameter','trajtotale','-v7.3');
 
 % %% Display
 % DynamicDisplay_single_im(img_comb_full,'Temperature',Thermometry);

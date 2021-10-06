@@ -22,12 +22,12 @@ addpath([current_path filesep 'function_needed' filesep 'gpuNUFFT/gpuNUFFT']);
 %% OPTIONS
 % Generals and pre-treatments
 Resolution = 0.8594; % Spatial resolution of the images and temperature maps in mm
+% TE = 20 --> 40 spks, TE = 15 --> 50 spks,TE = 10 --> 68 spks,TE = 5 --> 104 spks
 Number_of_spokes_per_image = 40; % if empty all the spokes will be used to create one image
 micro_coil_selection = 4; % 1 tip; 2 proximal; 3 distal; 4 averaging
 smoo = 2; % Smoothing of the motion curves
-N_resp_phase = 8; % Number of respiratory phase for Thermometry library
-N_card_phase = 3; % Number of cardiac phase for Thermometry library
-Calibration = 3000; % Number of projections for calibration
+im_cal = 12; % Number of phase images for Thermometry library
+Calibration = 5200; % Number of projections for calibration % 2000; 2500; 3400; 5200
 display = 1 ; % 1 to display intermediate figures
 
 % Thermometry
@@ -41,14 +41,16 @@ clearvars lambda beta;
 
 
 %% Load the data and noise
-% sagittal
+% data
+% filename='/home/maximeyon/mount/maxime.yon/Data/2021-04-08_Data_Radial_sheep/first_day/abl1/CV_Tracking_Maxime_GA_tra_abl1.h5';
 % filename='/home/maximeyon/mount/maxime.yon/Data/2020-02-14_sheep_Maxime/meas_MID00176_FID16433_ablation_3_real_with_GA.h5';
-% axial
-filename='/home/maximeyon/mount/maxime.yon/Data/2021-04-08_Data_Radial_sheep/first_day/abl1/CV_Tracking_Maxime_GA_tra_abl1.h5';
+filename='/home/maximeyon/mount/maxime.yon/Data/2021-06-16_data_TE/Radial_GA_abl5_TE_5.h5'; %Radial_GA_abl5_TE_5  Radial_GA_abl4_TE_10 Radial_GA_abl3_TE_15   Radial_GA_abl2_TE_20
+
 
 %Noise : if no noise comment the filename line
+% filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2021-04-08_Data_Radial_sheep/first_day/abl1/NOISE_tra_abl1.h5';
 % filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2020-02-14_sheep_Maxime/meas_MID00176_NOISE16433_ablation_3_real_with_GA.h5';
-filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2021-04-08_Data_Radial_sheep/first_day/abl1/NOISE_tra_abl1.h5';
+filename_noise ='/home/maximeyon/mount/maxime.yon/Data/2021-06-16_data_TE/NOISE_Radial_GA_abl.h5';
 
 
 %% Open the .h5 data
@@ -64,14 +66,12 @@ parameter.Ny = parameter.Nx;
 parameter.Nspokes = Number_of_spokes_per_image; % if empty all the spokes will be used to create one image
 parameter.micro_coil_selection = micro_coil_selection; % 1 tip; 2 proximal; 3 distal; 4 averaging
 parameter.smoo = smoo;
-parameter.N_resp_phase = N_resp_phase;
-parameter.N_card_phase = N_card_phase;
-parameter.im_cal = parameter.N_resp_phase.*parameter.N_card_phase;
+parameter.im_cal = im_cal;
 parameter.display = display;
 parameter.Nimages = floor(size(Kspace_proj,2)/parameter.Nspokes);
 parameter.Calibration = Calibration;
 
-clearvars Number_of_spokes_per_image micro_coil_selection smoo N_resp_phase N_card_phase im_cal;
+clearvars Number_of_spokes_per_image micro_coil_selection smoo im_cal;
 
 %% Remove oversampling
 Kspace_proj = Kspace_proj(size(Kspace_proj,1)*0.25+1:size(Kspace_proj,1)*0.75,:,:);
@@ -97,31 +97,32 @@ clearvars angles;
 
 % trajtotale = trajtotale./2;
 
-%% Catheter tracking
-[parameter,Centroid,Z_intensity] = my_catheter_tracking(parameter,kspace_cath);
+% %% Catheter tracking
+% [parameter,Centroid,Z_intensity] = my_catheter_tracking(parameter,kspace_cath);
+% 
+% %% Catheter motion filtering
+% parameter.Fs = 1/(parameter.TR.*10.^-3*2);
+% [Centroid] = Quantitative_frequency_filter(Centroid,parameter.Fs,parameter.smoo);
+% [Z_intensity] = Quantitative_frequency_filter(Z_intensity,parameter.Fs,parameter.smoo./2);
+% 
+% %% 2D rigid motion correction
+% [parameter,Kspace_proj] = my_2D_rigid_MOCO(parameter,Centroid,Kspace_proj,trajtotale);
 
-%% Catheter motion filtering
-parameter.Fs = 1/(parameter.TR.*10.^-3*2);
-[Centroid] = Quantitative_frequency_filter(Centroid,parameter.Fs,parameter.smoo);
-[Z_intensity] = Quantitative_frequency_filter(Z_intensity,parameter.Fs,parameter.smoo./2);
-
-%% 2D rigid motion correction
-[parameter,Kspace_proj] = my_2D_rigid_MOCO(parameter,Centroid,Kspace_proj,trajtotale);
-
-%% Create ECG and respiratory phase list
-[parameter,list_proj_ECG] = my_ECG_sorting(parameter,Z_intensity); % Here the spot intensity is chosen for ECG
-[parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Z_intensity);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
+% %% Create ECG and respiratory phase list
+% [parameter,list_proj_ECG] = my_ECG_sorting(parameter,Z_intensity); % Here the spot intensity is chosen for ECG
+% % [parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Z_intensity);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
 % [parameter,list_proj_Resp] = my_Respiratory_sorting(parameter,Centroid);% Here the spot intensity is chosen for Resp otherwise Centroid (XY motion) can be used
 
 %% Resolution reduction to increase SNR and time resolution
 parameter.Npixel = (round((parameter.FOVx/parameter.Resolution)/2)).*2;
 Ind_zeros = (size(Kspace_proj,1)-parameter.Npixel)/2;
-Kspace_proj(1:Ind_zeros,:,:) = 0; Kspace_proj(end-Ind_zeros:end,:,:) = 0;
+Kspace_proj(1:Ind_zeros,:,:) = 0; Kspace_proj(end-Ind_zeros+1:end,:,:) = 0;
 clearvars Ind_zeros;
 
 %% Undersampled Thermometry
 % Initialization and library computing
-[parameter,acqp,L] = my_undersampled_thermo_init(parameter,acqp,trajtotale,list_proj_Resp,list_proj_ECG,Kspace_proj);
+[parameter,acqp,L] = my_undersampled_thermo_init_static(parameter,acqp,trajtotale,Kspace_proj);
+% [parameter,acqp,L] = my_undersampled_thermo_init(parameter,acqp,trajtotale,list_proj_Resp,list_proj_ECG,Kspace_proj);
 
 %parallele Thermometry computing
 [parameter,Thermometry] = my_undersampled_thermo_computing(parameter,acqp,algp,L,Kspace_proj,trajtotale);
@@ -132,9 +133,10 @@ clearvars Ind_zeros;
 %% Save variables
 Thermometry = single(Thermometry);
 img_comb = single(img_comb); img_comb_full = single(img_comb_full);
-save(['/home/maximeyon/mount/maxime.yon/Grissom_for_Olivier/in_vivo/Ablation_in_vivo_axial' num2str(parameter.TE) '_ms_' num2str(parameter.Nspokes) '_spokes.mat'],'img_comb','img_comb_full','Thermometry','parameter','-v7.3');
+save(['/home/maximeyon/mount/maxime.yon/Grissom_for_Olivier/Data_Gel_static_TE=' num2str(parameter.TE) '_ms_' num2str(parameter.Nspokes) '_spokes.mat'],'img_comb','img_comb_full','Thermometry','parameter','-v7.3');
 
-
-% %% Display
+%% Display
 % DynamicDisplay_single_im(img_comb_full,'Temperature',Thermometry);
+
+
 
